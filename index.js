@@ -4,7 +4,6 @@ require('dotenv').config();
 
 const app = express();
 
-// View engine (EJS) setup – optional, but you have ejs installed
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
