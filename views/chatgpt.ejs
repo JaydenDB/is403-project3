@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness AI Coach</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #020617;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --accent: #22c55e;
+            --border-subtle: #e5e7eb;
+            --text-main: #0f172a;
+            --text-muted: #6b7280;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: radial-gradient(circle at top, #1f2937, #020617);
+            color: var(--text-main);
+        }
+
+        .nav {
+            background: #020617;
+            color: #e5e7eb;
+            padding: 12px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .nav-left { font-size: 14px; }
+        .nav-left span { font-weight: 600; }
+
+        .nav-links {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #e5e7eb;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            transition: background-color 0.15s, color 0.15s;
+        }
+
+        .nav-links a:hover { background-color: rgba(148, 163, 184, 0.2); }
+
+        .nav-links a.logout {
+            border: 1px solid #f97373;
+            color: #fecaca;
+        }
+
+        .nav-links a.logout:hover {
+            background-color: rgba(248, 113, 113, 0.16);
+        }
+
+        .page-wrapper {
+            max-width: 1100px;
+            margin: 24px auto 40px;
+            padding: 0 16px;
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: 28px;
+            text-align: left;
+            color: #f9fafb;
+        }
+
+        .page-subtitle {
+            margin: 0 0 18px;
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+            gap: 18px;
+        }
+
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 18px 18px 20px;
+            box-shadow: 0 14px 35px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(15,23,42,0.08);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            margin-bottom: 6px;
+            font-size: 18px;
+            color: var(--text-main);
+        }
+
+        .card-subtext {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #374151;
+        }
+
+        textarea, input, select {
+            width: 100%;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+            outline: none;
+            background-color: #f9fafb;
+            transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22);
+            background-color: #ffffff;
+        }
+
+        button {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.08s, box-shadow 0.15s;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+            margin-top: 4px;
+        }
+
+        .btn-primary:hover { background-color: #16a34a; }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(34, 197, 94, 0.5);
+        }
+
+        .btn-secondary {
+            background-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            margin-top: 6px;
+        }
+
+        .btn-secondary:hover { background-color: var(--primary-dark); }
+
+        .btn-secondary:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.5);
+        }
+
+        #questionnaire-response {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #16a34a;
+        }
+
+        #plan-preview {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #111827;
+            max-height: 280px;
+            overflow-y: auto;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 8px;
+        }
+
+        #ai-replies {
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 10px;
+            padding-top: 10px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .ai-message {
+            background-color: #f9fafb;
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin: 7px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .ai-message.user { background-color: #dbeafe; }
+        .ai-message.ai { background-color: #f3f4f6; }
+
+        .ai-message span.label { font-weight: 600; }
+        .chat-wrapper { display: flex; flex-direction: column; }
+
+        .food-items-list {
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .food-items-list ul {
+            padding-left: 18px;
+            margin: 4px 0 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation -->
+    <div class="nav">
+        <div class="nav-left">
+            <span>Welcome, <%= session.user.firstName %> <%= session.user.lastName %></span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/workout-log">Log Workout</a>
+            <a href="/food-log">Log Food</a>
+            <a href="/chatgpt">AI Coach</a>
+            <a href="/logout" class="logout">Logout</a>
+        </div>
+    </div>
+
+    <div class="page-wrapper">
+        <h1>Fitness AI Coach</h1>
+        <p class="page-subtitle">
+            Save your preferences, generate a weekly workout + calorie/protein plan, and ask about training or foods.
+        </p>
+
+        <div class="layout">
+            <!-- LEFT: Questionnaire + Plan -->
+            <div class="card">
+                <h2>Your Fitness Questionnaire</h2>
+                <p class="card-subtext">
+                    Update this anytime. The AI uses it to build or adjust your weekly plan.
+                </p>
+
+                <form id="questionnaire-form">
+                    <label for="goals">Fitness Goals</label>
+                    <textarea name="goals" id="goals" rows="2" placeholder="E.g., lose fat, build muscle, improve endurance..."><%= answers.goals %></textarea>
+
+                    <label for="level">Fitness Level</label>
+                    <select name="level" id="level">
+                        <option value="">Select level</option>
+                        <option value="beginner" <%= answers.level === 'beginner' ? 'selected' : '' %>>Beginner</option>
+                        <option value="intermediate" <%= answers.level === 'intermediate' ? 'selected' : '' %>>Intermediate</option>
+                        <option value="advanced" <%= answers.level === 'advanced' ? 'selected' : '' %>>Advanced</option>
+                    </select>
+
+                    <label for="diet">Dietary Preferences / Restrictions</label>
+                    <textarea name="diet" id="diet" rows="2" placeholder="E.g., high protein, vegetarian, lactose-free..."><%= answers.diet %></textarea>
+
+                    <label for="equipment">Available Equipment</label>
+                    <textarea name="equipment" id="equipment" rows="2" placeholder="E.g., dumbbells, barbell, treadmill, none"><%= answers.equipment %></textarea>
+
+                    <label for="time">Time Per Day (minutes)</label>
+                    <input type="number" name="time" id="time" value="<%= answers.time %>" placeholder="e.g., 30">
+
+                    <button type="submit" class="btn btn-primary">Save Questionnaire</button>
+                    <div id="questionnaire-response"></div>
+                </form>
+
+                <button type="button" id="btn-generate-plan" class="btn btn-secondary">
+                    Generate / Refresh 7-Day Plan
+                </button>
+
+                <div id="plan-preview"></div>
+
+                <button type="button" id="btn-save-plan" class="btn btn-primary" style="display:none;">
+                    Save This Plan to My Logs
+                </button>
+            </div>
+
+            <!-- RIGHT: Food Info + Ask AI -->
+            <div class="card">
+                <h2>Nutrition & Q&A</h2>
+                <p class="card-subtext">
+                    Look up calories/protein for foods, or ask anything about training and nutrition.
+                </p>
+
+                <!-- Food Info -->
+                <h3 style="font-size:15px; margin-top:0;">Food Info & Suggestions</h3>
+                <form id="food-info-form">
+                    <textarea
+                        id="food-query"
+                        rows="2"
+                        placeholder="Example: 2 eggs and a cup of cooked rice, plus a protein shake"
+                    ></textarea>
+                    <button type="submit" class="btn btn-secondary">Check Foods</button>
+                </form>
+                <div id="food-info-result" class="food-items-list"></div>
+
+                <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb;">
+
+                <!-- Ask AI Anything -->
+                <h3 style="font-size:15px; margin-top:0;">Ask the AI Coach</h3>
+                <div class="chat-wrapper">
+                    <form id="ask-ai-form">
+                        <textarea
+                            name="userMessage"
+                            id="userMessage"
+                            rows="3"
+                            placeholder="Example: Can you adjust my plan if I can only train 3 days this week?"
+                        ></textarea>
+                        <button type="submit" class="btn btn-secondary">Send to AI</button>
+                    </form>
+
+                    <div id="ai-replies"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============== Save questionnaire ==============
+        const questionnaireForm = document.getElementById('questionnaire-form');
+        questionnaireForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = {
+                goals: document.getElementById('goals').value,
+                level: document.getElementById('level').value,
+                diet: document.getElementById('diet').value,
+                equipment: document.getElementById('equipment').value,
+                time: document.getElementById('time').value
+            };
+
+            try {
+                const res = await axios.post('/update-questions', data);
+                const msg = res.data.reply || "Saved!";
+                const el = document.getElementById('questionnaire-response');
+                el.style.color = "#16a34a";
+                el.innerText = msg;
+            } catch (err) {
+                console.error(err);
+                const el = document.getElementById('questionnaire-response');
+                el.style.color = "red";
+                el.innerText = "Error updating your questionnaire.";
+            }
+        });
+
+        // ============== Generate & Save Plan ==============
+        let lastPlan = null;
+        const generateBtn = document.getElementById('btn-generate-plan');
+        const savePlanBtn = document.getElementById('btn-save-plan');
+        const planPreview = document.getElementById('plan-preview');
+
+        generateBtn.addEventListener('click', async () => {
+            planPreview.innerText = "Generating plan...";
+            savePlanBtn.style.display = "none";
+            lastPlan = null;
+
+            try {
+                const res = await axios.post('/generate-plan');
+                if (res.data.error) {
+                    planPreview.innerText = res.data.error;
+                    return;
+                }
+                lastPlan = res.data.plan;
+
+                let html = "";
+                res.data.plan.days.forEach(day => {
+                    html += `<div style="margin-bottom:8px;">`;
+                    html += `<strong>${day.label || ("Day " + (day.dayOffset + 1))}</strong><br/>`;
+                    if (day.calorie_goal) {
+                        html += `Calorie goal: ${day.calorie_goal} kcal<br/>`;
+                    }
+                    if (day.protein_goal_g) {
+                        html += `Protein goal: ${day.protein_goal_g} g<br/>`;
+                    }
+                    if (day.workouts && day.workouts.length) {
+                        html += `Workouts:<ul>`;
+                        day.workouts.forEach(w => {
+                            const tb = w.time_block ? ` (${w.time_block})` : "";
+                            html += `<li>${w.name}${tb}</li>`;
+                        });
+                        html += `</ul>`;
+                    }
+                    if (day.notes) {
+                        html += `<em>${day.notes}</em>`;
+                    }
+                    html += `</div>`;
+                });
+
+                planPreview.innerHTML = html || "No plan days returned.";
+                savePlanBtn.style.display = "inline-block";
+            } catch (err) {
+                console.error(err);
+                planPreview.innerText = "Error generating plan.";
+            }
+        });
+
+        savePlanBtn.addEventListener('click', async () => {
+            if (!lastPlan) return;
+
+            planPreview.innerText = "Saving plan to your logs...";
+
+            try {
+                const res = await axios.post('/save-plan', { plan: lastPlan });
+                if (res.data.error) {
+                    planPreview.innerText = res.data.error;
+                } else {
+                    planPreview.innerText = res.data.message || "Plan saved!";
+                }
+            } catch (err) {
+                console.error(err);
+                planPreview.innerText = "Error saving plan.";
+            }
+        });
+
+        // ============== Food Info / Macro Search ==============
+        const foodForm = document.getElementById('food-info-form');
+        const foodResult = document.getElementById('food-info-result');
+
+        foodForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = document.getElementById('food-query').value.trim();
+            if (!query) return;
+
+            foodResult.innerText = "Looking up foods...";
+
+            try {
+                const res = await axios.post('/food-info', { query });
+                if (res.data.error) {
+                    foodResult.innerText = res.data.error;
+                    return;
+                }
+
+                const items = res.data.items || [];
+                let html = "";
+
+                if (items.length) {
+                    html += "<ul>";
+                    items.forEach(item => {
+                        html += `<li><strong>${item.name}</strong> — ${item.calories ?? "?"} kcal`;
+                        if (item.protein_g != null) html += `, ${item.protein_g} g protein`;
+                        if (item.carbs_g != null) html += `, ${item.carbs_g} g carbs`;
+                        if (item.fat_g != null) html += `, ${item.fat_g} g fat`;
+                        html += `</li>`;
+                    });
+                    html += "</ul>";
+                } else {
+                    html += "<p>No items returned.</p>";
+                }
+
+                if (res.data.summary) {
+                    html += `<p><em>${res.data.summary}</em></p>`;
+                }
+
+                foodResult.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                foodResult.innerText = "Error looking up food info.";
+            }
+        });
+
+        // ============== Ask AI Anything ==============
+        const askAIForm = document.getElementById('ask-ai-form');
+        const aiRepliesDiv = document.getElementById('ai-replies');
+
+        askAIForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const messageEl = document.getElementById('userMessage');
+            const message = messageEl.value.trim();
+            if (!message) return;
+
+            const userDiv = document.createElement('div');
+            userDiv.classList.add('ai-message', 'user');
+            userDiv.innerHTML = `<span class="label">You:</span> ${message}`;
+            aiRepliesDiv.appendChild(userDiv);
+
+            messageEl.value = '';
+
+            try {
+                const res = await axios.post('/ask-ai', { userMessage: message });
+                const aiText = res.data.reply || "I couldn't generate a response.";
+
+                const aiDiv = document.createElement('div');
+                aiDiv.classList.add('ai-message', 'ai');
+                aiDiv.innerHTML = `<span class="label">AI:</span> ${aiText}`;
+                aiRepliesDiv.appendChild(aiDiv);
+
+                aiRepliesDiv.scrollTop = aiRepliesDiv.scrollHeight;
+            } catch (err) {
+                console.error(err);
+                const aiDiv = document.createElement('div');
+                aiDiv.classList.add('ai-message', 'ai');
+                aiDiv.innerHTML = `<span class="label">AI:</span> Sorry, something went wrong.`;
+                aiRepliesDiv.appendChild(aiDiv);
+                aiRepliesDiv.scrollTop = aiRepliesDiv.scrollHeight;
+            }
+        });
+    </script>
+
+</body>
+</html>

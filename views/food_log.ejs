@@ -1,35 +1,184 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Log Food</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:0; }
+        .nav { background:black; color:white; padding:15px; display:flex; justify-content:space-between; }
+        .nav a { color:white; text-decoration:none; margin-left:10px; }
+        .container { max-width:800px; margin:20px auto 80px; padding:0 16px; }
+        h1 { margin-top:0; }
+        .card { background:white; padding:20px; margin-bottom:20px; border-radius:8px; box-shadow:0 0 8px rgba(0,0,0,.12); }
+        label { display:block; margin-top:10px; font-weight:bold; }
+        textarea, input { width:100%; padding:8px; margin-top:4px; border-radius:4px; border:1px solid #ccc; }
+        button { margin-top:12px; padding:8px 14px; border:none; border-radius:999px; cursor:pointer; font-weight:600; }
+        .btn-primary { background:black; color:white; }
+        .btn-secondary { background:#2563eb; color:white; }
+        .btn-primary:hover { opacity:.9; }
+        .btn-secondary:hover { opacity:.9; }
+        .food-items-list ul { padding-left:20px; margin:6px 0 8px; }
+        .tag-goal { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:#f97316; color:white; margin-left:6px; }
+        .tag-completed { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:#16a34a; color:white; margin-left:6px; }
+    </style>
 </head>
 <body>
 
-<h2>Log Food</h2>
+<div class="nav">
+    <div>Food Log</div>
+    <div>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/workout-log">Workouts</a>
+        <a href="/chatgpt">AI Coach</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
 
-<form method="POST" action="/food-log">
+<div class="container">
+    <!-- AI FOOD SEARCH -->
+    <div class="card">
+        <h1>Log What You Ate</h1>
+        <p>Describe what you ate and the AI will estimate calories & macros, then you can save it to today.</p>
 
-    <label>Food:</label>
-    <select name="food_id" required>
-        <% foods.forEach(food => { %>
-            <option value="<%= food.food_id %>">
-                <%= food.food_name %> - <%= food.calories %> cal
-            </option>
-        <% }) %>
-    </select>
-    <br><br>
+        <form id="food-search-form">
+            <label for="food-query">What did you eat?</label>
+            <textarea id="food-query" rows="2" placeholder="Example: 2 eggs, a cup of cooked rice, and a protein shake"></textarea>
+            <button type="submit" class="btn-secondary">Check Foods</button>
+        </form>
 
-    <label>Daily Calorie Goal:</label>
-    <input type="number" name="calorie_goal" required><br><br>
+        <div id="food-search-result" class="food-items-list"></div>
+        <button id="log-foods-btn" class="btn-primary" style="display:none;">Log these foods for today</button>
+        <div id="log-foods-status" style="margin-top:8px; font-size:13px;"></div>
+    </div>
 
-    <label>Total Weight Lost (lbs):</label>
-    <input type="number" step="0.01" name="total_weight_lost" required><br><br>
+    <!-- TODAY'S LOGGED FOODS -->
+    <div class="card">
+        <h2>Today's Logged Foods</h2>
+        <% if (todaysFoods && todaysFoods.length > 0) { %>
+            <ul>
+                <% todaysFoods.forEach(row => { %>
+                    <li>
+                        <strong><%= row.food_name %></strong>
+                        <% if (row.is_goal) { %>
+                            <span class="tag-goal">Daily Goal</span>
+                        <% } %>
+                        <% if (row.completed) { %>
+                            <span class="tag-completed">Done</span>
+                        <% } %>
+                        <br>
+                        <% if (!row.is_goal) { %>
+                            <span><%= row.calories %> kcal, <%= row.protein %> g protein</span><br>
+                        <% } else { %>
+                            <span>Calorie goal: <%= row.calorie_goal %> kcal</span><br>
+                        <% } %>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>No foods logged yet today.</p>
+        <% } %>
+    </div>
 
-    <button type="submit">Save Food Log</button>
-</form>
+    <!-- MANUAL QUICK ADD (OPTIONAL) -->
+    <div class="card">
+        <h2>Quick Add from List (optional)</h2>
+        <form method="POST" action="/food-log">
+            <label>Food from database:</label>
+            <select name="food_id">
+                <% foods.forEach(food => { %>
+                    <option value="<%= food.food_id %>">
+                        <%= food.food_name %> - <%= food.calories %> cal, <%= food.protein %> g protein
+                    </option>
+                <% }) %>
+            </select>
+            <label>Calories for this serving:</label>
+            <input type="number" name="calorie_goal" required>
+            <label>Total Weight Lost (update if needed):</label>
+            <input type="number" step="0.01" name="total_weight_lost" value="0">
+            <button type="submit" class="btn-primary">Save Manual Food Log</button>
+        </form>
+    </div>
+</div>
 
-<br>
-<a href="/dashboard">⬅ Back to Dashboard</a>
+<script>
+    let lastFoodItems = null;
+
+    // search foods with AI
+    const foodSearchForm = document.getElementById('food-search-form');
+    const resultDiv = document.getElementById('food-search-result');
+    const logBtn = document.getElementById('log-foods-btn');
+    const statusDiv = document.getElementById('log-foods-status');
+
+    foodSearchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const q = document.getElementById('food-query').value.trim();
+        if (!q) return;
+
+        resultDiv.textContent = "Looking up foods...";
+        statusDiv.textContent = "";
+        logBtn.style.display = "none";
+        lastFoodItems = null;
+
+        try {
+            const res = await axios.post('/food-info', { query: q });
+            if (res.data.error) {
+                resultDiv.textContent = res.data.error;
+                return;
+            }
+
+            const items = res.data.items || [];
+            lastFoodItems = items;
+
+            let html = "";
+            if (items.length) {
+                html += "<ul>";
+                items.forEach(item => {
+                    html += `<li><strong>${item.name}</strong> — ${item.calories ?? "?"} kcal`;
+                    if (item.protein_g != null) html += `, ${item.protein_g} g protein`;
+                    if (item.carbs_g != null) html += `, ${item.carbs_g} g carbs`;
+                    if (item.fat_g != null) html += `, ${item.fat_g} g fat`;
+                    html += `</li>`;
+                });
+                html += "</ul>";
+            } else {
+                html += "<p>No items returned.</p>";
+            }
+
+            if (res.data.summary) {
+                html += `<p><em>${res.data.summary}</em></p>`;
+            }
+
+            resultDiv.innerHTML = html;
+            if (items.length) {
+                logBtn.style.display = "inline-block";
+            }
+        } catch (err) {
+            console.error(err);
+            resultDiv.textContent = "Error looking up foods.";
+        }
+    });
+
+    // log foods into DB
+    logBtn.addEventListener('click', async () => {
+        if (!lastFoodItems || !lastFoodItems.length) return;
+
+        statusDiv.textContent = "Saving foods to today...";
+        try {
+            const res = await axios.post('/food-log/add-ai-foods', { items: lastFoodItems });
+            if (res.data.error) {
+                statusDiv.textContent = res.data.error;
+            } else {
+                statusDiv.textContent = res.data.message || "Saved!";
+                // refresh page to show in today's list
+                setTimeout(() => window.location.reload(), 700);
+            }
+        } catch (err) {
+            console.error(err);
+            statusDiv.textContent = "Error saving food log.";
+        }
+    });
+</script>
 
 </body>
 </html>

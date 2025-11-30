@@ -2,84 +2,163 @@
 <html>
 <head>
     <title>Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            padding: 0;
-            margin: 0;
-        }
-
-        .nav {
-            background: black;
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .container {
-            padding: 30px;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,.15);
-        }
-
-        a {
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        button {
-            padding: 10px 15px;
-            border: none;
-            background: black;
-            color: white;
-            cursor: pointer;
-            border-radius: 4px;
-        }
+        body { font-family: Arial, sans-serif; background:#f4f4f4; padding:0; margin:0; }
+        .nav { background:black; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center; }
+        .nav a { color:white; text-decoration:none; margin-left:10px; }
+        .container { padding:30px; margin-bottom:120px; max-width:1000px; margin-left:auto; margin-right:auto; }
+        .card { background:white; padding:20px; margin-bottom:20px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,.15); }
+        .bottom-nav { position:fixed; bottom:0; left:0; width:100%; background:black; display:flex; justify-content:space-around; padding:15px 0; }
+        .bottom-nav a { color:white; text-decoration:none; font-size:18px; font-weight:bold; }
+        button { padding:8px 12px; border:none; background:black; color:white; cursor:pointer; border-radius:4px; font-size:14px; }
+        button:disabled { opacity:0.5; cursor:default; }
     </style>
 </head>
 <body>
 
-    <!-- NAV BAR -->
-    <div class="nav">
-        <div>
-            Welcome, <%= session.user.firstName %> <%= session.user.lastName %>
-            <% if (session.user.level === 'M') { %>
-                (Manager)
-            <% } %>
-        </div>
-        <div>
-            <a href="/logout">Logout</a>
-        </div>
+<div class="nav">
+    <div>
+        Welcome, <%= session.user.firstName %> <%= session.user.lastName %>
+        <% if (session.user.level === 'M') { %> (Manager) <% } %>
+    </div>
+    <div>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/workout-log">Workouts</a>
+        <a href="/food-log">Food</a>
+        <a href="/chatgpt">AI Coach</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- ACCOUNT INFO -->
+    <div class="card">
+        <h2>Account Info</h2>
+        <p><strong>Username:</strong> <%= session.user.username %></p>
+        <p><strong>User ID:</strong> <%= session.user.id %></p>
+        <p><strong>Level:</strong> <%= session.user.level %></p>
     </div>
 
-    <!-- MAIN CONTENT -->
-    <div class="container">
-
-        <div class="card">
-            <h2>Account Info</h2>
-            <p><strong>Username:</strong> <%= session.user.username %></p>
-            <p><strong>User ID:</strong> <%= session.user.id %></p>
-            <p><strong>Level:</strong> <%= session.user.level %></p>
-        </div>
-
-        <div class="card">
-            <h2>Fitness Dashboard</h2>
-            <p>This is where your workouts, food logs, and stats will go.</p>
-
-            <a href="/workout-log"><button>Log Workout</button></a>
-            <a href="/food-log"><button>Log Food</button></a>
-        </div>
-
+    <!-- GOALS -->
+    <div class="card">
+        <h2>Your Goals (from latest day)</h2>
+        <p><strong>Daily Calorie Goal:</strong> <%= goals.calorie_goal || 'Not set' %></p>
+        <p><strong>Total Weight Lost:</strong> <%= goals.total_weight_lost || 'No data' %></p>
     </div>
+
+    <!-- TODAY'S WORKOUTS -->
+    <div class="card">
+        <h2>Today’s Workouts</h2>
+        <% if (todayWorkouts && todayWorkouts.length > 0) { %>
+            <ul>
+                <% todayWorkouts.forEach(w => { %>
+                    <li><%= w.workout_name %> — <%= w.calories_burned %> calories</li>
+                <% }) %>
+            </ul>
+        <% } else { %>
+            <p>No workouts logged today.</p>
+        <% } %>
+        <a href="/workout-log"><button>Go to Workout Log</button></a>
+    </div>
+
+    <!-- TODAY'S MEALS -->
+    <div class="card">
+        <h2>Today's Foods</h2>
+        <% if (todayFoods && todayFoods.length > 0) { %>
+            <ul>
+                <% todayFoods.forEach(f => { %>
+                    <li><%= f.food_name %> — <%= f.calories %> calories</li>
+                <% }) %>
+            </ul>
+        <% } else { %>
+            <p>No foods logged today.</p>
+        <% } %>
+        <a href="/food-log"><button>Go to Food Log</button></a>
+    </div>
+
+    <!-- WEEKLY CHART -->
+    <div class="card">
+        <h2>Weekly Overview</h2>
+        <p>Compare your calorie goal, calories eaten, calories burned, and total weight lost over a 7-day window.</p>
+
+        <div style="margin-bottom:10px;">
+            <button onclick="changeWeek(1)">◀ Previous Week</button>
+            <button onclick="changeWeek(-1)" <%= weekOffset === 0 ? 'disabled' : '' %>>Next Week ▶</button>
+        </div>
+
+        <canvas id="weeklyChart" height="110"></canvas>
+    </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+    <a href="/chatgpt">AI</a>
+    <a href="/workout-log">Workouts</a>
+    <a href="/food-log">Food</a>
+</div>
+
+<script>
+    // Safely inject chart data as a JSON string and parse it
+    const chartData = JSON.parse('<%- JSON.stringify(chartDataWeekly || {}) %>');
+
+    // Safely inject the current week offset as a number
+    let currentOffset = parseInt('<%= (typeof weekOffset !== "undefined" ? weekOffset : 0) %>', 10);
+
+    function changeWeek(delta) {
+        currentOffset += delta;
+        window.location.href = '/dashboard?weekOffset=' + currentOffset;
+    }
+
+    if (chartData.labels && chartData.labels.length) {
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: 'Calories Eaten',
+                        data: chartData.eaten,
+                        backgroundColor: 'rgba(59,130,246,0.6)'
+                    },
+                    {
+                        label: 'Calories Burned',
+                        data: chartData.burned,
+                        backgroundColor: 'rgba(34,197,94,0.6)'
+                    },
+                    {
+                        label: 'Total Weight Lost (lbs)',
+                        data: chartData.weight_lost,
+                        type: 'line',
+                        borderColor: 'rgba(239,68,68,0.9)',
+                        borderWidth: 2,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Calories' }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Weight Lost (lbs)' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+
 
 </body>
 </html>

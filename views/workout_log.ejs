@@ -1,38 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Log Workout</title>
+    <style>
+        body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:0; }
+        .nav { background:black; color:white; padding:15px; display:flex; justify-content:space-between; }
+        .nav a { color:white; text-decoration:none; margin-left:10px; }
+        .container { max-width:800px; margin:20px auto 80px; padding:0 16px; }
+        .card { background:white; padding:20px; margin-bottom:20px; border-radius:8px; box-shadow:0 0 8px rgba(0,0,0,.12); }
+        h1,h2 { margin-top:0; }
+        label { display:block; margin-top:10px; font-weight:bold; }
+        input, select { width:100%; padding:8px; margin-top:4px; border-radius:4px; border:1px solid #ccc; }
+        button { margin-top:12px; padding:8px 14px; border:none; border-radius:999px; cursor:pointer; font-weight:600; }
+        .btn-primary { background:black; color:white; }
+        .btn-secondary { background:#2563eb; color:white; }
+        .btn-primary:hover, .btn-secondary:hover { opacity:.9; }
+        .tag-completed { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:#16a34a; color:white; margin-left:6px; }
+    </style>
 </head>
 <body>
 
-<h2>Log a Workout</h2>
+<div class="nav">
+    <div>Workout Log</div>
+    <div>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/food-log">Food</a>
+        <a href="/chatgpt">AI Coach</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
 
-<form method="POST" action="/workout-log">
+<div class="container">
+    <!-- TODAY'S PLAN -->
+    <div class="card">
+        <h1>Today's Planned Workouts</h1>
+        <% if (todaysLogs && todaysLogs.length > 0) { %>
+            <ul>
+                <% todaysLogs.forEach(w => { %>
+                    <li>
+                        <strong><%= w.workout_name %></strong>
+                        <% if (w.completed) { %>
+                            <span class="tag-completed">Done</span>
+                        <% } %>
+                        <br>
+                        <span><%= w.calories_burned %> calories</span>
+                        <form method="POST" action="/workout-log/complete/<%= w.workout_log_id %>" style="display:inline;">
+                            <% if (!w.completed) { %>
+                                <button type="submit" class="btn-secondary" style="margin-left:8px;">Mark Done</button>
+                            <% } %>
+                        </form>
+                    </li>
+                <% }) %>
+            </ul>
+        <% } else { %>
+            <p>No workouts scheduled for today yet. Generate a plan in the AI Coach tab, or log one manually.</p>
+        <% } %>
+    </div>
 
-    <label>Workout:</label>
-    <select name="workout_id" required>
-        <% workouts.forEach(workout => { %>
-            <option value="<%= workout.workout_id %>">
-                <%= workout.workout_name %> - <%= workout.body_part_worked %>
-            </option>
-        <% }) %>
-    </select>
-    <br><br>
+    <!-- MANUAL ADD -->
+    <div class="card">
+        <h2>Log an Extra Workout</h2>
 
-    <label>Workout Streak:</label>
-    <input type="number" name="workout_streak" required><br><br>
+        <form method="POST" action="/workout-log">
+            <label>Workout:</label>
+            <select name="workout_id" required>
+                <% workouts.forEach(workout => { %>
+                    <option value="<%= workout.workout_id %>">
+                        <%= workout.workout_name %> - <%= workout.body_part_worked %>
+                    </option>
+                <% }) %>
+            </select>
 
-    <label>Calories Burned:</label>
-    <input type="number" name="calories_burned" required><br><br>
+            <label>Workout Streak:</label>
+            <input type="number" name="workout_streak" required>
 
-    <label>Heart Rate:</label>
-    <input type="number" name="heart_rate" required><br><br>
+            <label>Calories Burned:</label>
+            <input type="number" name="calories_burned" required>
 
-    <button type="submit">Save Workout</button>
-</form>
+            <label>Heart Rate:</label>
+            <input type="number" name="heart_rate" required>
 
-<br>
-<a href="/dashboard">⬅ Back to Dashboard</a>
+            <button type="submit" class="btn-primary">Save Workout</button>
+        </form>
+    </div>
+</div>
 
 </body>
 </html>
