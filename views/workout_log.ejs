@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Workout</title>
+</head>
+<body>
+
+<h2>Log a Workout</h2>
+
+<form method="POST" action="/workout-log">
+
+    <label>Workout:</label>
+    <select name="workout_id" required>
+        <% workouts.forEach(workout => { %>
+            <option value="<%= workout.workout_id %>">
+                <%= workout.workout_name %> - <%= workout.body_part_worked %>
+            </option>
+        <% }) %>
+    </select>
+    <br><br>
+
+    <label>Workout Streak:</label>
+    <input type="number" name="workout_streak" required><br><br>
+
+    <label>Calories Burned:</label>
+    <input type="number" name="calories_burned" required><br><br>
+
+    <label>Heart Rate:</label>
+    <input type="number" name="heart_rate" required><br><br>
+
+    <button type="submit">Save Workout</button>
+</form>
+
+<br>
+<a href="/dashboard">⬅ Back to Dashboard</a>
+
+</body>
+</html>

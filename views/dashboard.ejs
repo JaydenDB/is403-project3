@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav {
+            background: black;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .container {
+            padding: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,.15);
+        }
+
+        a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            background: black;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAV BAR -->
+    <div class="nav">
+        <div>
+            Welcome, <%= session.user.firstName %> <%= session.user.lastName %>
+            <% if (session.user.level === 'M') { %>
+                (Manager)
+            <% } %>
+        </div>
+        <div>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+
+        <div class="card">
+            <h2>Account Info</h2>
+            <p><strong>Username:</strong> <%= session.user.username %></p>
+            <p><strong>User ID:</strong> <%= session.user.id %></p>
+            <p><strong>Level:</strong> <%= session.user.level %></p>
+        </div>
+
+        <div class="card">
+            <h2>Fitness Dashboard</h2>
+            <p>This is where your workouts, food logs, and stats will go.</p>
+
+            <a href="/workout-log"><button>Log Workout</button></a>
+            <a href="/food-log"><button>Log Food</button></a>
+        </div>
+
+    </div>
+
+</body>
+</html>
