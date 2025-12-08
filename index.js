@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 
 const express = require("express");
 const session = require("express-session");
@@ -7,6 +7,7 @@ const OpenAI = require("openai");
 
 const app = express();
 app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 
 const port = process.env.PORT || 3001;
@@ -16,7 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
     session({
-        secret: process.env.SESSION_SECRET || 'fallback-secret-key',
+        secret: process.env.SESSION_SECRET || "fallback-secret-key",
         resave: false,
         saveUninitialized: false,
     })
@@ -28,12 +29,12 @@ app.use(
 const knex = require("knex")({
     client: "pg",
     connection: {
-        host : process.env.DB_HOST || "localhost",
-        user : process.env.DB_USER || "postgres",
-        password : process.env.DB_PASSWORD || "ChPost05$",
-        database : process.env.DB_NAME || "Project3",
-        port : process.env.DB_PORT || 5432 
-    }
+        host: process.env.DB_HOST || "localhost",
+        user: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD || "ChPost05$",
+        database: process.env.DB_NAME || "Project3",
+        port: process.env.DB_PORT || 5432,
+    },
 });
 
 // ==========================
@@ -71,14 +72,15 @@ app.post("/login", async (req, res) => {
             )
             .first();
 
-        if (!user) return res.render("index", { error: "Invalid username or password" });
+        if (!user)
+            return res.render("index", { error: "Invalid username or password" });
 
         req.session.user = {
             id: user.user_id,
             username: user.username,
             firstName: user.cust_first_name,
             lastName: user.cust_last_name,
-            level: user.level
+            level: user.level,
         };
 
         res.redirect("/dashboard");
@@ -93,13 +95,18 @@ app.post("/login", async (req, res) => {
 // ==========================
 app.post("/register", async (req, res) => {
     const {
-        username, password, email, phone_number,
-        cust_first_name, cust_last_name
+        username,
+        password,
+        email,
+        phone_number,
+        cust_first_name,
+        cust_last_name,
     } = req.body;
 
     try {
         const existing = await knex("security").where("username", username).first();
-        if (existing) return res.render("index", { error: "Username already exists" });
+        if (existing)
+            return res.render("index", { error: "Username already exists" });
 
         // Insert into security first
         const [newUser] = await knex("security")
@@ -110,7 +117,7 @@ app.post("/register", async (req, res) => {
         await knex("customers").insert({
             user_id: newUser.user_id,
             cust_first_name,
-            cust_last_name
+            cust_last_name,
         });
 
         req.session.user = {
@@ -118,7 +125,7 @@ app.post("/register", async (req, res) => {
             username,
             firstName: cust_first_name,
             lastName: cust_last_name,
-            level: newUser.level
+            level: newUser.level,
         };
 
         res.redirect("/firsttime");
@@ -139,7 +146,13 @@ app.get("/firsttime", (req, res) => {
 app.post("/firsttime", async (req, res) => {
     if (!req.session.user) return res.redirect("/");
 
-    const { cust_age, cust_weight, cust_height, cust_gender, cust_date_of_birth } = req.body;
+    const {
+        cust_age,
+        cust_weight,
+        cust_height,
+        cust_gender,
+        cust_date_of_birth,
+    } = req.body;
 
     try {
         await knex("customers")
@@ -149,7 +162,7 @@ app.post("/firsttime", async (req, res) => {
                 cust_weight: cust_weight || null,
                 cust_height: cust_height || null,
                 cust_gender: cust_gender || null,
-                cust_date_of_birth: cust_date_of_birth || null
+                cust_date_of_birth: cust_date_of_birth || null,
             });
 
         res.redirect("/chatgpt");
@@ -168,14 +181,11 @@ app.get("/dashboard", async (req, res) => {
     const userId = req.session.user.id;
 
     try {
-        // --- 1) TODAY STRINGS (for the top cards) ---
         const today = new Date();
         const todayStr = today.toISOString().slice(0, 10);
 
-        // --- 2) WEEK OFFSET FROM QUERY (0 = current week, 1 = previous week, etc.) ---
         const weekOffset = parseInt(req.query.weekOffset || "0", 10);
 
-        // We'll define the week as a 7-day window ending on (today - 7*weekOffset)
         const endDate = new Date(today);
         endDate.setDate(endDate.getDate() - weekOffset * 7);
 
@@ -185,7 +195,7 @@ app.get("/dashboard", async (req, res) => {
         const startStr = startDate.toISOString().slice(0, 10);
         const endStr = endDate.toISOString().slice(0, 10);
 
-        // --- 3) TOP CARDS: TODAY'S WORKOUTS & FOODS (still only today) ---
+        // 1) Top cards: today's workouts and foods
         const todayWorkouts = await knex("workout_log")
             .join("workouts", "workout_log.workout_id", "workouts.workout_id")
             .where("workout_log.cust_id", userId)
@@ -213,9 +223,7 @@ app.get("/dashboard", async (req, res) => {
             .orderBy("food_log_id", "desc")
             .first();
 
-        // --- 4) WEEKLY DATA FOR CHART (7-day window) ---
-
-        // All food logs for this user in the week window
+        // 2) Weekly data
         const weeklyFoods = await knex("food_log")
             .join("foods", "food_log.food_id", "foods.food_id")
             .where("food_log.cust_id", userId)
@@ -228,37 +236,34 @@ app.get("/dashboard", async (req, res) => {
                 "food_log.total_weight_lost"
             );
 
-        // All workout logs in the week window
         const weeklyWorkouts = await knex("workout_log")
             .where("cust_id", userId)
             .andWhere("log_date", ">=", startStr)
             .andWhere("log_date", "<=", endStr)
             .select("log_date", "calories_burned");
 
-        // --- 5) AGGREGATE BY DAY ---
-
-        // Pre-initialize a map so all 7 days are present even if no data
         const dayMap = {};
         const labels = [];
 
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const key = d.toISOString().slice(0, 10); // YYYY-MM-DD
-            // label like "Nov 30"
-            const niceLabel = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            const key = d.toISOString().slice(0, 10);
+            const niceLabel = d.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+            });
 
             dayMap[key] = {
                 label: niceLabel,
                 eaten: 0,
                 burned: 0,
                 weight_lost: 0,
-                goalCalories: 0
+                goalCalories: 0,
             };
 
             labels.push(key);
         }
 
-        // Foods: "Daily Goal" rows = calorie goal; others = calories eaten entries
-        weeklyFoods.forEach(row => {
+        weeklyFoods.forEach((row) => {
             const dateKey = row.log_date.toISOString().slice(0, 10);
             const entry = dayMap[dateKey];
             if (!entry) return;
@@ -273,51 +278,42 @@ app.get("/dashboard", async (req, res) => {
                 entry.eaten += cals;
             }
 
-            // store the highest total_weight_lost recorded that day
             if (weightLost > entry.weight_lost) {
                 entry.weight_lost = weightLost;
             }
         });
 
-        // Workouts: sum calories burned
-        weeklyWorkouts.forEach(row => {
+        weeklyWorkouts.forEach((row) => {
             const dateKey = row.log_date.toISOString().slice(0, 10);
             const entry = dayMap[dateKey];
             if (!entry) return;
-
             entry.burned += Number(row.calories_burned || 0);
         });
 
-        // --- 6) Build chart data arrays in date order ---
-        const chartLabels = labels.map(key => dayMap[key].label);
-        const eatenArr = labels.map(key => dayMap[key].eaten);
-        const burnedArr = labels.map(key => dayMap[key].burned);
-        const weightLostArr = labels.map(key => dayMap[key].weight_lost);
-        // if you want to use goalCalories later, it's also here:
-        // const goalArr = labels.map(key => dayMap[key].goalCalories);
+        const chartLabels = labels.map((key) => dayMap[key].label);
+        const eatenArr = labels.map((key) => dayMap[key].eaten);
+        const burnedArr = labels.map((key) => dayMap[key].burned);
+        const weightLostArr = labels.map((key) => dayMap[key].weight_lost);
 
         const chartDataWeekly = {
             labels: chartLabels,
             eaten: eatenArr,
             burned: burnedArr,
-            weight_lost: weightLostArr
+            weight_lost: weightLostArr,
         };
 
-        // --- 7) Render dashboard ---
         res.render("dashboard", {
             todayWorkouts,
             todayFoods,
             goals: goalEntry || {},
             chartDataWeekly,
-            weekOffset
+            weekOffset,
         });
-
     } catch (err) {
         console.error(err);
         res.send("Error loading dashboard");
     }
 });
-
 
 // ==========================
 // ✅ WORKOUT LOG PAGES
@@ -356,7 +352,7 @@ app.post("/workout-log", async (req, res) => {
             calories_burned,
             heart_rate,
             log_date: new Date().toISOString().slice(0, 10),
-            completed: false
+            completed: false,
         });
 
         res.redirect("/workout-log");
@@ -383,7 +379,6 @@ app.post("/workout-log/complete/:id", async (req, res) => {
     }
 });
 
-
 // ==========================
 // ✅ FOOD LOG PAGES
 // ==========================
@@ -407,14 +402,13 @@ app.get("/food-log", async (req, res) => {
             "food_log.completed"
         );
 
-    const todaysFoods = todaysFoodsRaw.map(row => ({
+    const todaysFoods = todaysFoodsRaw.map((row) => ({
         ...row,
-        is_goal: row.food_name.toLowerCase() === "daily goal"
+        is_goal: row.food_name.toLowerCase() === "daily goal",
     }));
 
     res.render("food_log", { foods, todaysFoods });
 });
-
 
 app.post("/food-log", async (req, res) => {
     if (!req.session.user) return res.redirect("/");
@@ -428,7 +422,7 @@ app.post("/food-log", async (req, res) => {
             calorie_goal,
             total_weight_lost,
             log_date: new Date().toISOString().slice(0, 10),
-            completed: true  // manual entries usually mean already eaten
+            completed: true,
         });
 
         res.redirect("/food-log");
@@ -458,7 +452,6 @@ app.post("/food-log/add-ai-foods", async (req, res) => {
             const carbs = item.carbs_g || 0;
             const fat = item.fat_g || 0;
 
-            // find or create food
             let foodRow = await knex("foods")
                 .whereRaw("LOWER(food_name) = LOWER(?)", [name])
                 .first();
@@ -470,7 +463,7 @@ app.post("/food-log/add-ai-foods", async (req, res) => {
                         calories,
                         protein,
                         carbs,
-                        fat
+                        fat,
                     })
                     .returning("*");
             }
@@ -478,10 +471,10 @@ app.post("/food-log/add-ai-foods", async (req, res) => {
             await knex("food_log").insert({
                 cust_id: userId,
                 food_id: foodRow.food_id,
-                calorie_goal: calories, // using calorie_goal field to store calories eaten for this item
+                calorie_goal: calories,
                 total_weight_lost: 0,
                 log_date: todayStr,
-                completed: true
+                completed: true,
             });
         }
 
@@ -492,8 +485,6 @@ app.post("/food-log/add-ai-foods", async (req, res) => {
     }
 });
 
-
-// mark food completed
 app.post("/food-log/complete/:id", async (req, res) => {
     if (!req.session.user) return res.redirect("/");
 
@@ -516,7 +507,6 @@ app.post("/food-log/complete/:id", async (req, res) => {
 // ==========================
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// helper: gather context
 async function getUserContextForPlan(userId) {
     const customer = await knex("customers").where("user_id", userId).first();
     const questions = await knex("user_questions").where("cust_id", userId).first();
@@ -553,10 +543,16 @@ app.post("/update-questions", async (req, res) => {
         if (exists) {
             await knex("user_questions")
                 .where("cust_id", userId)
-                .update({ goals, level, diet, equipment, time });
+                .update({ goals, level, equipment, diet, time });
         } else {
-            await knex("user_questions")
-                .insert({ cust_id: userId, goals, level, diet, equipment, time });
+            await knex("user_questions").insert({
+                cust_id: userId,
+                goals,
+                level,
+                equipment,
+                diet,
+                time,
+            });
         }
 
         res.json({ reply: "Questionnaire saved successfully!" });
@@ -567,7 +563,7 @@ app.post("/update-questions", async (req, res) => {
 });
 
 // ==========================
-// ✅ GENERATE PLAN (WORKOUTS + CALORIE/PROTEIN GOALS)
+// ✅ GENERATE PLAN
 // ==========================
 app.post("/generate-plan", async (req, res) => {
     if (!req.session.user) return res.json({ error: "Not logged in." });
@@ -585,7 +581,9 @@ app.post("/generate-plan", async (req, res) => {
 You are a fitness planner AI.
 
 User profile:
-- Name: ${customer?.cust_first_name || ""} ${customer?.cust_last_name || ""}
+- Name: ${customer?.cust_first_name || ""} ${
+            customer?.cust_last_name || ""
+        }
 - Age: ${customer?.cust_age || "unknown"}
 - Weight (lbs): ${customer?.cust_weight || "unknown"}
 - Height (in): ${customer?.cust_height || "unknown"}
@@ -631,12 +629,11 @@ Rules:
         const completion = await client.chat.completions.create({
             model: "gpt-4.1-mini",
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.7
+            temperature: 0.7,
         });
 
         let raw = completion.choices[0].message.content.trim();
 
-        // --- attempt to salvage JSON if there's extra text or code fences ---
         const firstBrace = raw.indexOf("{");
         const lastBrace = raw.lastIndexOf("}");
 
@@ -665,9 +662,8 @@ Rules:
     }
 });
 
-
 // ==========================
-// ✅ SAVE PLAN TO workout_log & food_log (daily goals)
+// ✅ SAVE PLAN TO workout_log & food_log
 // ==========================
 app.post("/save-plan", async (req, res) => {
     if (!req.session.user) return res.json({ error: "Not logged in." });
@@ -680,7 +676,6 @@ app.post("/save-plan", async (req, res) => {
     }
 
     try {
-        // ensure a "Daily Goal" food exists to hang calorie_goal entries on
         let dailyGoalFood = await knex("foods")
             .whereRaw("LOWER(food_name) = LOWER('Daily Goal')")
             .first();
@@ -692,7 +687,7 @@ app.post("/save-plan", async (req, res) => {
                     calories: 0,
                     protein: 0,
                     carbs: 0,
-                    fat: 0
+                    fat: 0,
                 })
                 .returning("*");
         }
@@ -710,7 +705,6 @@ app.post("/save-plan", async (req, res) => {
             const offset = day.dayOffset || 0;
             const log_date = toDateString(offset);
 
-            // WORKOUTS for the day (auto-create if missing)
             if (Array.isArray(day.workouts)) {
                 for (const w of day.workouts) {
                     if (!w.name) continue;
@@ -719,18 +713,37 @@ app.post("/save-plan", async (req, res) => {
                         .whereRaw("LOWER(workout_name) = LOWER(?)", [w.name])
                         .first();
 
-                    // 🔥 AUTO-CREATE workout if it doesn't exist yet
                     if (!workoutRow) {
                         const guessedBodyPart = (() => {
                             const n = w.name.toLowerCase();
-                            if (n.includes("squat") || n.includes("lunge") || n.includes("deadlift")) return "Legs";
+                            if (
+                                n.includes("squat") ||
+                                n.includes("lunge") ||
+                                n.includes("deadlift")
+                            )
+                                return "Legs";
                             if (n.includes("push") || n.includes("bench")) return "Chest";
                             if (n.includes("row") || n.includes("pull")) return "Back";
                             if (n.includes("curl") || n.includes("bicep")) return "Arms";
                             if (n.includes("tricep") || n.includes("dip")) return "Arms";
-                            if (n.includes("shoulder") || n.includes("press")) return "Shoulders";
-                            if (n.includes("plank") || n.includes("crunch") || n.includes("core")) return "Core";
-                            if (n.includes("run") || n.includes("cardio") || n.includes("burpee") || n.includes("jump")) return "Cardio";
+                            if (
+                                n.includes("shoulder") ||
+                                n.includes("press")
+                            )
+                                return "Shoulders";
+                            if (
+                                n.includes("plank") ||
+                                n.includes("crunch") ||
+                                n.includes("core")
+                            )
+                                return "Core";
+                            if (
+                                n.includes("run") ||
+                                n.includes("cardio") ||
+                                n.includes("burpee") ||
+                                n.includes("jump")
+                            )
+                                return "Cardio";
                             return null;
                         })();
 
@@ -750,7 +763,7 @@ app.post("/save-plan", async (req, res) => {
                                 workout_name: w.name,
                                 body_part_worked: guessedBodyPart,
                                 equipment_needed: guessedEquipment,
-                                difficulty: guessedDifficulty
+                                difficulty: guessedDifficulty,
                             })
                             .returning("*");
                     }
@@ -762,12 +775,11 @@ app.post("/save-plan", async (req, res) => {
                         calories_burned: w.approx_calories || 0,
                         heart_rate: 0,
                         log_date,
-                        completed: false
+                        completed: false,
                     });
                 }
             }
 
-            // Daily calorie goal (no specific foods, just goal)
             if (day.calorie_goal) {
                 await knex("food_log").insert({
                     cust_id: userId,
@@ -775,7 +787,7 @@ app.post("/save-plan", async (req, res) => {
                     calorie_goal: day.calorie_goal,
                     total_weight_lost: 0,
                     log_date,
-                    completed: false
+                    completed: false,
                 });
             }
         }
@@ -825,7 +837,7 @@ User query: ${query}
             model: "gpt-4.1-mini",
             response_format: { type: "json_object" },
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.3
+            temperature: 0.3,
         });
 
         const raw = completion.choices[0].message.content;
@@ -837,7 +849,6 @@ User query: ${query}
             return res.json({ error: "AI returned invalid format." });
         }
 
-        // basic sanity check
         if (!data.items || !Array.isArray(data.items)) {
             return res.json({ error: "AI did not include an items array." });
         }
@@ -849,7 +860,6 @@ User query: ${query}
     }
 });
 
-
 // ==========================
 // ✅ GENERAL ASK AI
 // ==========================
@@ -859,7 +869,7 @@ app.post("/ask-ai", async (req, res) => {
     try {
         const completion = await client.chat.completions.create({
             model: "gpt-4.1-mini",
-            messages: [{ role: "user", content: userMessage }]
+            messages: [{ role: "user", content: userMessage }],
         });
 
         res.json({ reply: completion.choices[0].message.content });
@@ -874,6 +884,230 @@ app.post("/ask-ai", async (req, res) => {
 // ==========================
 app.get("/logout", (req, res) => {
     req.session.destroy(() => res.redirect("/"));
+});
+
+// ==========================
+// ✅ MANAGER-ONLY ROUTES
+// ==========================
+function requireManager(req, res, next) {
+    if (!req.session.user) return res.redirect("/");
+    if (req.session.user.level !== "M") return res.status(403).send("Forbidden");
+    next();
+}
+
+// List all users
+app.get("/manager", requireManager, async (req, res) => {
+    try {
+        const users = await knex("security")
+            .join("customers", "security.user_id", "customers.user_id")
+            .select(
+                "security.user_id",
+                "security.username",
+                "security.level",
+                "security.email",
+                "security.phone_number",
+                "customers.cust_first_name",
+                "customers.cust_last_name"
+            )
+            .orderBy("security.user_id", "asc");
+
+        res.render("manager", { users, error: null });
+    } catch (err) {
+        console.error("Manager list error:", err);
+        res.render("manager", { users: [], error: "Error loading users" });
+    }
+});
+
+// Add user
+app.post("/manager/add", requireManager, async (req, res) => {
+    const {
+        username,
+        password,
+        level,
+        cust_first_name,
+        cust_last_name,
+        email,
+        phone_number,
+        cust_age,
+        cust_weight,
+        cust_height,
+        cust_gender,
+        cust_date_of_birth,
+    } = req.body;
+
+    try {
+        const existing = await knex("security").where("username", username).first();
+        if (existing) {
+            return res.redirect("/manager");
+        }
+
+        const [newUser] = await knex("security")
+            .insert({
+                username,
+                password,
+                level: level || "U",
+                email: email || null,
+                phone_number: phone_number || null,
+            })
+            .returning("*");
+
+        await knex("customers").insert({
+            user_id: newUser.user_id,
+            cust_first_name,
+            cust_last_name,
+            cust_age: cust_age || null,
+            cust_weight: cust_weight || null,
+            cust_height: cust_height || null,
+            cust_gender: cust_gender || null,
+            cust_date_of_birth: cust_date_of_birth || null,
+        });
+
+        res.redirect("/manager");
+    } catch (err) {
+        console.error("Manager add error:", err);
+        res.redirect("/manager");
+    }
+});
+
+// Show a single user's details
+app.get("/manager/user/:id", requireManager, async (req, res) => {
+    const id = req.params.id;
+
+    try {
+        const user = await knex("security")
+            .leftJoin("customers", "security.user_id", "customers.user_id")
+            .where("security.user_id", id)
+            .select(
+                "security.user_id",
+                "security.username",
+                "security.level",
+                "security.email",
+                "security.phone_number",
+                "customers.cust_first_name",
+                "customers.cust_last_name",
+                "customers.cust_age",
+                "customers.cust_weight",
+                "customers.cust_height",
+                "customers.cust_gender",
+                "customers.cust_date_of_birth"
+            )
+            .first();
+
+        if (!user) return res.status(404).send("User not found");
+
+        const questions = await knex("user_questions").where("cust_id", id).first();
+
+        const foodLogs = await knex("food_log")
+            .join("foods", "food_log.food_id", "foods.food_id")
+            .where("food_log.cust_id", id)
+            .select(
+                "food_log.food_log_id",
+                "food_log.calorie_goal",
+                "food_log.total_weight_lost",
+                "food_log.log_date",
+                "food_log.completed",
+                "foods.food_name"
+            )
+            .orderBy("food_log.log_date", "desc")
+            .limit(50);
+
+        const workoutLogs = await knex("workout_log")
+            .join("workouts", "workout_log.workout_id", "workouts.workout_id")
+            .where("workout_log.cust_id", id)
+            .select(
+                "workout_log.workout_log_id",
+                "workout_log.workout_streak",
+                "workout_log.calories_burned",
+                "workout_log.heart_rate",
+                "workout_log.log_date",
+                "workout_log.completed",
+                "workouts.workout_name"
+            )
+            .orderBy("workout_log.log_date", "desc")
+            .limit(50);
+
+        res.render("edit_user", {
+            user,
+            questions: questions || {},
+            foodLogs,
+            workoutLogs,
+            error: null,
+        });
+    } catch (err) {
+        console.error("Manager user detail error:", err);
+        res.status(500).send("Server error");
+    }
+});
+
+// Update user basic info
+app.post("/manager/user/edit/:id", requireManager, async (req, res) => {
+    const id = req.params.id;
+    const {
+        username,
+        password,
+        level,
+        email,
+        phone_number,
+        cust_first_name,
+        cust_last_name,
+        cust_age,
+        cust_weight,
+        cust_height,
+        cust_gender,
+        cust_date_of_birth,
+    } = req.body;
+
+    try {
+        await knex.transaction(async (trx) => {
+            const securityUpdate = {
+                username,
+                level,
+                email: email || null,
+                phone_number: phone_number || null,
+            };
+
+            if (password && password.trim() !== "") {
+                securityUpdate.password = password;
+            }
+
+            await trx("security").where("user_id", id).update(securityUpdate);
+
+            await trx("customers").where("user_id", id).update({
+                cust_first_name,
+                cust_last_name,
+                cust_age: cust_age || null,
+                cust_weight: cust_weight || null,
+                cust_height: cust_height || null,
+                cust_gender: cust_gender || null,
+                cust_date_of_birth: cust_date_of_birth || null,
+            });
+        });
+
+        res.redirect("/manager/user/" + id);
+    } catch (err) {
+        console.error("Manager edit error:", err);
+        res.redirect("/manager/user/" + id);
+    }
+});
+
+// Delete user and related data
+app.post("/manager/user/delete/:id", requireManager, async (req, res) => {
+    const id = req.params.id;
+
+    try {
+        await knex.transaction(async (trx) => {
+            await trx("workout_log").where("cust_id", id).del();
+            await trx("food_log").where("cust_id", id).del();
+            await trx("user_questions").where("cust_id", id).del();
+            await trx("customers").where("user_id", id).del();
+            await trx("security").where("user_id", id).del();
+        });
+
+        res.redirect("/manager");
+    } catch (err) {
+        console.error("Manager delete error:", err);
+        res.redirect("/manager");
+    }
 });
 
 app.listen(port, () => console.log("Server running on port", port));

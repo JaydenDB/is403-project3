@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage User - <%= user.username %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --bg: #f4f4f5;
+            --nav-bg: #020617;
+            --nav-text: #e5e7eb;
+            --card-bg: #ffffff;
+            --border-subtle: #e5e7eb;
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+        }
+
+        .nav {
+            background: var(--nav-bg);
+            color: var(--nav-text);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .nav-left {
+            font-size: 14px;
+        }
+        .nav-left span { font-weight: 600; }
+
+        .nav-links {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--nav-text);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            transition: background-color 0.15s;
+        }
+
+        .nav-links a:hover {
+            background-color: rgba(148, 163, 184, 0.3);
+        }
+
+        .nav-links a.logout {
+            border: 1px solid #f97373;
+            color: #fecaca;
+        }
+        .nav-links a.logout:hover {
+            background-color: rgba(248, 113, 113, 0.18);
+        }
+
+        .wrapper {
+            max-width: 1100px;
+            margin: 24px auto 40px;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(15,23,42,0.05);
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+            color: var(--text-main);
+        }
+
+        .muted { color: var(--text-muted); font-size: 13px; }
+
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 160px;
+        }
+
+        .field label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 3px;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            padding: 7px 8px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 13px;
+        }
+
+        .field textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background-color 0.15s, transform 0.08s, box-shadow 0.15s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        .links-row {
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .links-row a {
+            color: var(--primary);
+            text-decoration: none;
+            margin-right: 10px;
+        }
+
+        .links-row a:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 6px 5px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .danger-card {
+            border-color: rgba(220, 38, 38, 0.4);
+        }
+
+        @media (max-width: 700px) {
+            .flex-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="nav">
+    <div class="nav-left">
+        <span>Manage User</span> — <%= user.username %> (ID: <%= user.user_id %>)
+    </div>
+    <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/workout-log">Workouts</a>
+        <a href="/food-log">Food</a>
+        <a href="/chatgpt">AI Coach</a>
+        <a href="/manager">Manager</a>
+        <a href="/logout" class="logout">Logout</a>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="card">
+        <div class="links-row">
+            <a href="/manager">&larr; Back to Users</a>
+        </div>
+        <h1><%= user.cust_first_name %> <%= user.cust_last_name %></h1>
+        <p class="muted">
+            Edit account + profile info below. Password field is optional – leave blank to keep the current password.
+        </p>
+
+        <form class="flex-column" method="post" action="/manager/user/edit/<%= user.user_id %>">
+            <div class="flex-row">
+                <div class="field">
+                    <label>Username *</label>
+                    <input name="username" value="<%= user.username %>" required />
+                </div>
+                <div class="field">
+                    <label>Password (leave blank to keep)</label>
+                    <input name="password" placeholder="New password (optional)" />
+                </div>
+                <div class="field">
+                    <label>Level</label>
+                    <select name="level">
+                        <option value="U" <%= user.level === 'U' ? 'selected' : '' %>>User</option>
+                        <option value="M" <%= user.level === 'M' ? 'selected' : '' %>>Manager</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex-row">
+                <div class="field">
+                    <label>Email</label>
+                    <input name="email" type="email" value="<%= user.email || '' %>" />
+                </div>
+                <div class="field">
+                    <label>Phone Number</label>
+                    <input name="phone_number" value="<%= user.phone_number || '' %>" />
+                </div>
+            </div>
+
+            <div class="flex-row">
+                <div class="field">
+                    <label>First Name</label>
+                    <input name="cust_first_name" value="<%= user.cust_first_name || '' %>" />
+                </div>
+                <div class="field">
+                    <label>Last Name</label>
+                    <input name="cust_last_name" value="<%= user.cust_last_name || '' %>" />
+                </div>
+                <div class="field">
+                    <label>Age</label>
+                    <input name="cust_age" type="number" value="<%= user.cust_age || '' %>" />
+                </div>
+            </div>
+
+            <div class="flex-row">
+                <div class="field">
+                    <label>Weight (lbs)</label>
+                    <input name="cust_weight" type="number" step="0.01" value="<%= user.cust_weight || '' %>" />
+                </div>
+                <div class="field">
+                    <label>Height (inches)</label>
+                    <input name="cust_height" type="number" step="0.01" value="<%= user.cust_height || '' %>" />
+                </div>
+                <div class="field">
+                    <label>Gender</label>
+                    <select name="cust_gender">
+                        <option value="" <%= !user.cust_gender ? 'selected' : '' %>>Select</option>
+                        <option value="M" <%= user.cust_gender === 'M' ? 'selected' : '' %>>Male</option>
+                        <option value="F" <%= user.cust_gender === 'F' ? 'selected' : '' %>>Female</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Date of Birth</label>
+                    <input name="cust_date_of_birth" type="date" value="<%= user.cust_date_of_birth || '' %>" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top:10px;">
+                Save Changes
+            </button>
+        </form>
+    </div>
+
+    <!-- Questionnaire -->
+    <div class="card">
+        <h2>Questionnaire / Goals</h2>
+        <% if (questions && (questions.goals || questions.level || questions.diet || questions.equipment || questions.time)) { %>
+            <p><strong>Goals:</strong> <%= questions.goals || '' %></p>
+            <p><strong>Fitness Level:</strong> <%= questions.level || '' %></p>
+            <p><strong>Diet:</strong> <%= questions.diet || '' %></p>
+            <p><strong>Equipment:</strong> <%= questions.equipment || '' %></p>
+            <p><strong>Time per day:</strong> <%= questions.time || '' %></p>
+        <% } else { %>
+            <p class="muted">No questionnaire data available for this user.</p>
+        <% } %>
+    </div>
+
+    <!-- Food logs -->
+    <div class="card">
+        <h2>Recent Food Logs (last 50)</h2>
+        <% if (foodLogs && foodLogs.length) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Food</th>
+                        <th>Calorie Goal / Item Calories</th>
+                        <th>Total Weight Lost</th>
+                        <th>Completed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <% foodLogs.forEach(f => { %>
+                    <tr>
+                        <td><%= f.log_date %></td>
+                        <td><%= f.food_name %></td>
+                        <td><%= f.calorie_goal %></td>
+                        <td><%= f.total_weight_lost %></td>
+                        <td><%= f.completed ? 'Yes' : 'No' %></td>
+                    </tr>
+                <% }) %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p class="muted">No food logs found.</p>
+        <% } %>
+    </div>
+
+    <!-- Workout logs -->
+    <div class="card">
+        <h2>Recent Workout Logs (last 50)</h2>
+        <% if (workoutLogs && workoutLogs.length) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Workout</th>
+                        <th>Calories Burned</th>
+                        <th>Streak</th>
+                        <th>Heart Rate</th>
+                        <th>Completed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <% workoutLogs.forEach(w => { %>
+                    <tr>
+                        <td><%= w.log_date %></td>
+                        <td><%= w.workout_name %></td>
+                        <td><%= w.calories_burned %></td>
+                        <td><%= w.workout_streak %></td>
+                        <td><%= w.heart_rate %></td>
+                        <td><%= w.completed ? 'Yes' : 'No' %></td>
+                    </tr>
+                <% }) %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p class="muted">No workout logs found.</p>
+        <% } %>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="card danger-card">
+        <h2 style="color:#b91c1c;">Danger Zone</h2>
+        <p class="muted">
+            Deleting this user will permanently remove their account, questionnaire, and all workout/food logs.
+        </p>
+        <form
+            method="post"
+            action="/manager/user/delete/<%= user.user_id %>"
+            onsubmit="return confirm('Delete this user and ALL their data? This cannot be undone.');"
+        >
+            <button type="submit" class="btn-danger">
+                Delete User
+            </button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
